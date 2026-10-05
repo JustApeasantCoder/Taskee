@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><TargetFramework>net9.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF><UseWindowsForms>true</UseWindowsForms><Nullable>enable</Nullable>
+    <PlatformTarget>x64</PlatformTarget>
+    <AssemblyName>Taskee</AssemblyName><Version>0.1.1</Version><ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Taskee.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup><ProjectReference Include="../Taskee.Core/Taskee.Core.csproj" /></ItemGroup>
+  <ItemGroup><Content Include="../../build/Release/TaskeePanel.dll" Link="TaskeePanel.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="Exists('../../build/Release/TaskeePanel.dll')" /></ItemGroup>
+  <ItemGroup><Content Include="../../build/Release/TaskeeBridge.exe" Link="TaskeeBridge.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="Exists('../../build/Release/TaskeeBridge.exe')" /></ItemGroup>
+</Project>

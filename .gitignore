@@ -1,0 +1,8 @@
+/build/
+/research/
+/dist/
+**/bin/
+**/obj/
+/runtime/
+/docs/evidence/
+*.user

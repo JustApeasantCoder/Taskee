@@ -1,0 +1,4 @@
+LIBRARY TaskeeTap
+EXPORTS
+    DllGetClassObject PRIVATE
+    DllCanUnloadNow PRIVATE
