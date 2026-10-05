@@ -4,6 +4,14 @@ A native Windows taskbar monitor with a configurable WPF options app. CPU/GPU te
 
 ## Run
 
+Download the Windows x64 installer or portable ZIP from
+[GitHub Releases](https://github.com/JustApeasantCoder/Taskee/releases).
+The installer runs for your account without administrator access and includes
+the .NET runtime. It adds Start Menu shortcuts and an optional desktop shortcut.
+User profiles are preserved during upgrades and uninstall. Exit Taskee before
+upgrading or uninstalling. After moving from portable to installed, toggle
+Windows startup off/on in General if it was previously enabled.
+
 Run `dist/Taskee-0.1.1/Taskee.exe`, or use `Start-Taskee.ps1`. Keep the portable folder together in a writable location. Exit an older running Taskee instance before opening the updated build. The current build supports Windows 11's primary, left-aligned horizontal taskbar with Widgets enabled. Settings save automatically. Closing options keeps the app in the tray by default; **Exit Taskee** restores the original taskbar spacing. `Start-Taskee.ps1 -Stop` closes the running instance.
 
 Failed saves retry automatically. If a profile cannot be loaded, or uses a newer settings version, Taskee protects the original files and displays a recovery notice. **Save recovery profile** copies both originals into `%LOCALAPPDATA%/Taskee/recovery` before saving the settings currently shown in options. Loading an older backup never silently replaces a newer profile.
@@ -36,6 +44,26 @@ Requires Visual Studio 2022 C++ Build Tools, Windows SDK, CMake and .NET 9 SDK:
 ```
 
 `-Portable` builds a self-contained Windows x64 folder; no .NET installation is needed to run it. `-OutputDirectory` selects its destination. `-Test` runs the native taskbar policy and metric/rate/profile checks. The original reservation experiment remains available through `Start-Test.ps1`; do not run it at the same time as the full app.
+
+To build release artifacts:
+
+```powershell
+.\scripts\Package.ps1
+.\scripts\Installer.ps1 -CompilerPath 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+.\scripts\Test-Installer.ps1
+```
+
+The installer script requires [Inno Setup 6.6 or later](https://jrsoftware.org/isinfo.php),
+builds and tests a fresh self-contained payload, then writes the installer,
+portable ZIP and SHA-256 manifest under `dist`. The portable ZIP has a `Taskee`
+root folder. Session files and local QA evidence are excluded. Native session
+copies may remain after uninstall until Explorer exits naturally; profile data
+is intentionally kept under `%LOCALAPPDATA%/Taskee`.
+
+Installer QA uses a temporary install folder and Start Menu group. It verifies
+every payload hash, renders the four options pages, reinstalls, uninstalls and
+checks that saved profiles, the Windows startup entry and Explorer are unchanged.
+It refuses to run if this Windows account already has an installed Taskee copy.
 
 Additional development checks:
 

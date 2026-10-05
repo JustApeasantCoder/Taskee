@@ -1,0 +1,19 @@
+Taskee adds configurable hardware and network readings beside Windows Weather.
+
+This release supports Windows 11 x64, with the primary taskbar aligned left and
+Widgets enabled. Windows taskbar internals can change after a Windows update.
+
+Exit a running Taskee instance before upgrading or switching from the portable
+edition. After switching folders, toggle Windows startup off/on in General if
+you previously enabled it, so it points to the installed copy.
+
+Taskee installs for your Windows account without administrator access. The
+.NET runtime is included. Windows startup is controlled in General and is off
+by default. CPU sensors may require an existing MSI Afterburner monitor, or
+separate PawnIO driver installation and an elevated sensor helper. This
+installer does not install drivers or change Windows security settings.
+
+Exit Taskee before uninstalling. Your settings, profile backups and logs in
+%LOCALAPPDATA%\Taskee are preserved. Native runtime session copies beside the
+app are left in place because Explorer can retain an inactive DLL until it
+exits naturally. Setup does not request an Explorer restart.
