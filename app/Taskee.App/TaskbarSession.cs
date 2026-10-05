@@ -18,8 +18,7 @@ internal sealed class TaskbarSession : IDisposable
         if(session!=null) {
             try {
                 ConfigStore.AtomicWrite(Path.Combine(session,"panel.json"),JsonSerializer.Serialize(panel,SensorService.WireJson));
-                string status=Path.Combine(session,"taskee-status.txt");
-                if(File.Exists(status)) Status=File.ReadAllText(status).Trim();
+                Status=ReadStatus(panel);
             } catch(Exception ex) { Status="Taskbar connection: "+ex.Message; }
             return;
         }
@@ -46,6 +45,33 @@ internal sealed class TaskbarSession : IDisposable
         } catch(Exception ex) { Program.Log(ex.ToString());Status=ex.Message;retry=Environment.TickCount64+30000; }
         finally { attaching=false; }
     }
+    private string ReadStatus(PanelSnapshot panel)
+    {
+        if(!panel.Enabled) return "Taskbar display is off";
+        var screens=System.Windows.Forms.Screen.AllScreens.OrderByDescending(s=>s.Primary).ThenBy(s=>s.Bounds.Left).ThenBy(s=>s.Bounds.Top).ToList();
+        var windows=new Dictionary<string,IntPtr>();
+        EnumWindows((window,_)=> {
+            GetWindowThreadProcessId(window,out uint pid);var name=new StringBuilder(64);GetClassName(window,name,name.Capacity);
+            if(pid==explorer && name.ToString() is "Shell_TrayWnd" or "Shell_SecondaryTrayWnd") windows[System.Windows.Forms.Screen.FromHandle(window).DeviceName]=window;
+            return true;
+        },IntPtr.Zero);
+        var statuses=new List<string>();
+        foreach(int number in new[]{1,2,3}.Where(n=>n==1 || (n==2&&panel.SecondMonitor) || (n==3&&panel.ThirdMonitor))) {
+            string value;
+            if(number>screens.Count) value="Monitor is disconnected";
+            else if(!windows.TryGetValue(screens[number-1].DeviceName,out var window)) value="Enable ‘Show my taskbar on all displays’ in Windows";
+            else {
+                string path=Path.Combine(session!,"taskee-status-"+window.ToInt64()+".txt");
+                string initial=Path.Combine(session!,"taskee-status.txt");
+                value=File.Exists(path)?File.ReadAllText(path).Trim():File.Exists(initial)?File.ReadAllText(initial).Trim():"Waiting for native taskbar layout";
+                if(value.Length==0) value="Waiting for native taskbar layout";
+            }
+            statuses.Add($"Monitor {number}: {value}");
+        }
+        string? pending=statuses.FirstOrDefault(s=>!s.Contains(": Connected ·",StringComparison.Ordinal));
+        string summary=pending?.Split('\n')[0]??(statuses.Count==1?"Connected · native taskbar space reserved":$"Connected on {statuses.Count} monitors");
+        return summary+"\n"+string.Join("\n",statuses);
+    }
     private async Task<int> Attach(uint pid,string dll)
     {
         CloseBridge();
@@ -62,4 +88,7 @@ internal sealed class TaskbarSession : IDisposable
     internal static uint GetExplorer() { GetWindowThreadProcessId(FindWindow("Shell_TrayWnd",null),out uint pid);return pid; }
     [DllImport("user32.dll",CharSet=CharSet.Unicode)] private static extern IntPtr FindWindow(string name,string? title);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window,out uint pid);
+    private delegate bool WindowCallback(IntPtr window,IntPtr parameter);
+    [DllImport("user32.dll")] private static extern bool EnumWindows(WindowCallback callback,IntPtr parameter);
+    [DllImport("user32.dll",CharSet=CharSet.Unicode)] private static extern int GetClassName(IntPtr window,StringBuilder name,int maximum);
 }

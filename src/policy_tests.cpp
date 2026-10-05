@@ -8,6 +8,22 @@ static void Check(bool condition,char const* name) {
 }
 int main() {
     try {
+        taskee::VisualTreeAncestry tree;
+        tree.Added(100,0);tree.Added(101,100);tree.Added(102,101);
+        tree.Added(200,0);tree.Added(201,200);
+        Check(tree.Path(102)==std::vector<std::uint64_t>({102,101,100}) && tree.Path(201)==std::vector<std::uint64_t>({201,200}),"Each taskbar resolves its own XAML host through visual ancestry");
+        tree.Removed(100);
+        Check(tree.Path(102).empty() && tree.Path(201).back()==200,"Removing a XAML host invalidates its descendants without affecting another monitor");
+        tree.Added(300,0);tree.Added(101,300);
+        Check(tree.Path(102).back()==300,"Reparented taskbar controls resolve the replacement host");
+        tree.Removed(101);
+        Check(tree.Path(102).empty() && tree.Path(999).empty(),"Incomplete or removed visual ancestry cannot select a host");
+        tree.Added(101,102);
+        Check(tree.Path(102).empty(),"Cyclic diagnostic ancestry cannot select a host or hang discovery");
+        Check(taskee::MonitorSelected(1,false,false)&&!taskee::MonitorSelected(2,false,false)&&!taskee::MonitorSelected(3,false,false),"Primary-only default leaves other taskbars untouched");
+        Check(taskee::MonitorSelected(2,true,false)&&!taskee::MonitorSelected(3,true,false),"Second monitor can be enabled independently");
+        Check(!taskee::MonitorSelected(2,false,true)&&taskee::MonitorSelected(3,false,true),"Third monitor can be enabled independently");
+        Check(!taskee::MonitorSelected(0,true,true)&&!taskee::MonitorSelected(4,true,true),"Missing and unselected monitors cannot reserve space");
         Check(taskee::PanelWidth(300,600,620,500)==340,"Narrow slot overrides an oversized minimum without reversed bounds");
         Check(taskee::PanelWidth(300,0,620,159)==0,"No available space produces no native panel");
         Check(taskee::PanelWidth(400.1,0,620,560.7)==400,"Fractional slot bounds cannot round beyond the available space");
@@ -42,6 +58,12 @@ int main() {
         Check(binding.Queue(4,12).has_value(),"Failed attachment can be retried");
         auto stopped=binding.Queue(5,12);binding.Stop();
         Check(!binding.Current(*stopped)&&!binding.Queue(6,13),"Owner shutdown prevents stale callbacks from attaching");
+        taskee::TaskbarBinding primary,secondary,thirdMonitor;
+        auto primaryTicket=primary.Queue(1,10),secondaryTicket=secondary.Queue(2,20),thirdTicket=thirdMonitor.Queue(3,30);
+        secondary.Removed(20);
+        Check(primary.Current(*primaryTicket)&&!secondary.Current(*secondaryTicket)&&thirdMonitor.Current(*thirdTicket),"Removing one monitor's controls preserves the other monitor bindings");
+        secondaryTicket=secondary.Queue(4,40);
+        Check(secondaryTicket&&secondary.Current(*secondaryTicket)&&primary.Current(*primaryTicket),"A reconnected monitor binds without replacing the primary");
         std::printf("%u native policy checks passed.\n",checks);return 0;
     } catch(std::exception const& ex) {std::fprintf(stderr,"FAIL %s\n",ex.what());return 1;}
 }

@@ -12,7 +12,7 @@ User profiles are preserved during upgrades and uninstall. Exit Taskee before
 upgrading or uninstalling. After moving from portable to installed, toggle
 Windows startup off/on in General if it was previously enabled.
 
-Run `dist/Taskee-0.1.1/Taskee.exe`, or use `Start-Taskee.ps1`. Keep the portable folder together in a writable location. Exit an older running Taskee instance before opening the updated build. The current build supports Windows 11's primary, left-aligned horizontal taskbar with Widgets enabled. Settings save automatically. Closing options keeps the app in the tray by default; **Exit Taskee** restores the original taskbar spacing. `Start-Taskee.ps1 -Stop` closes the running instance.
+Run `dist/Taskee-0.1.2/Taskee.exe`, or use `Start-Taskee.ps1`. Keep the portable folder together in a writable location. Exit an older running Taskee instance before opening the updated build. The current build supports Windows 11's left-aligned horizontal taskbar, with optional stats on the second and third monitors. Settings save automatically. Closing options keeps the app in the tray by default; **Exit Taskee** restores the original taskbar spacing. `Start-Taskee.ps1 -Stop` closes the running instance.
 
 Failed saves retry automatically. If a profile cannot be loaded, or uses a newer settings version, Taskee protects the original files and displays a recovery notice. **Save recovery profile** copies both originals into `%LOCALAPPDATA%/Taskee/recovery` before saving the settings currently shown in options. Loading an older backup never silently replaces a newer profile.
 
@@ -21,10 +21,19 @@ Failed saves retry automatically. If a profile cannot be loaded, or uses a newer
 - **Taskbar:** add, duplicate, hide or remove cards; drag or use arrows to reorder; stack individual cards below the previous card. Pick a device/adapter or specific hardware sensor, units, precision and a short label.
 - **Temperature:** automatic selection, explicit package temperature, highest reported core, average of reported core sensors, or a specific sensor. Package selection never silently substitutes another reading.
 - **Time:** current values, a time-weighted rolling average, rolling peak/minimum (2–600 seconds), or a resettable session peak. Missing/stale values display a dash; missing intervals are excluded from averages.
+- **History:** hover over a taskbar stat or live-preview value for its last five minutes of live readings, current value and low/high values. Graphs have rounded stable scales, minute marks, a latest-reading dot and dashed alert thresholds. They follow the selected units and leave gaps for paused or unavailable readings. Resetting session peaks keeps the graph history. Toggle graphs in Appearance.
 - **Appearance:** installed fonts, weight and size; 1–3 stacked rows; column/row spacing, padding, width limits, stable widths, separators, opacity, background color and radius. Four presets provide starting layouts.
 - **Alerts:** per-card warning/critical thresholds, shared alert colors, optional critical notifications. Thresholds use underlying units (°C, W, %, GiB, bytes/s).
 - **Sensors:** live sensor inventory and provider details, a read-only MSI Afterburner bridge, sensor-helper restart and optional elevated CPU access.
-- **General:** refresh interval, close-to-tray, optional Windows startup, profile import/export and session-peak reset. Startup is off unless enabled.
+- **General:** optional stats on the second and third monitors, refresh interval, close-to-tray, optional Windows startup, profile import/export and session-peak reset. Startup and additional monitors are off unless enabled.
+
+The primary monitor always receives stats while **On taskbar** is enabled.
+Enable either additional monitor independently in **General → Taskbar monitors**.
+Other monitors are numbered from left to right, then top to bottom; this may
+differ from Windows' display numbers. Enable **Show my taskbar on all displays**
+in Windows for the additional taskbars. All selected monitors use the same cards
+and appearance. An unavailable monitor waits for its taskbar to return; turning
+off its option restores only that taskbar's spacing.
 
 The preview uses live readings. Double-clicking the taskbar stats opens options. Network rates measure adapter traffic, including local transfers; they are not an internet speed test. Automatic adapter selection chooses a connected physical adapter; VPN/virtual adapters are available for explicit selection.
 
@@ -61,7 +70,7 @@ copies may remain after uninstall until Explorer exits naturally; profile data
 is intentionally kept under `%LOCALAPPDATA%/Taskee`.
 
 Installer QA uses a temporary install folder and Start Menu group. It verifies
-every payload hash, renders the four options pages, reinstalls, uninstalls and
+every payload hash, renders the four options pages and history graphs, reinstalls, uninstalls and
 checks that saved profiles, the Windows startup entry and Explorer are unchanged.
 It refuses to run if this Windows account already has an installed Taskee copy.
 
@@ -86,6 +95,6 @@ Taskee inserts its own XAML panel and insets the app-button layout. Windows mana
 
 Removed taskbar controls invalidate pending callbacks, release the old inset, and allow replacement controls to reconnect. Native width limits give available space precedence over an oversized minimum. Failed-layout timing continues across value-driven resizing, and hidden panels do not intercept clicks.
 
-Private taskbar elements are used; future Windows changes may require an update. Center alignment, taskbar replacements, equal-width multi-monitor identification, and other Windows builds have not been validated. Width limits clip excess cards; choose fewer columns or stacked rows for a smaller footprint. Font size is bounded by the available taskbar height.
+Private taskbar elements are used; future Windows changes may require an update. Center alignment, taskbar replacements, hotplug, third-monitor rendering, and other Windows builds have not been validated in this update. Discovery uses the native XAML host window rather than comparing island-local coordinates with screen coordinates. Native policy checks cover host ancestry and independent monitor bindings. Width limits clip excess cards; choose fewer columns or stacked rows for a smaller footprint. Font size is bounded by the available taskbar height.
 
 See [implementation validation](docs/implementation-validation.md), the original [reservation test](docs/reservation-test.md), and [component notices](THIRD-PARTY.md).

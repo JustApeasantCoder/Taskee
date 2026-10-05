@@ -1,6 +1,10 @@
-param([switch]$Portable, [switch]$Test, [string]$OutputDirectory = 'dist\Taskee-0.1.1')
+param([switch]$Portable, [switch]$Test, [string]$OutputDirectory)
 $ErrorActionPreference = 'Stop'
 $taskRoot = $PSScriptRoot
+if (-not $OutputDirectory) {
+    [xml]$taskProject = Get-Content -LiteralPath (Join-Path $taskRoot 'app\Taskee.App\Taskee.App.csproj') -Raw
+    $OutputDirectory = 'dist\Taskee-' + [string]$taskProject.Project.PropertyGroup.Version
+}
 Push-Location -LiteralPath $taskRoot
 try {
     cmake -S . -B build -G 'Visual Studio 17 2022' -A x64

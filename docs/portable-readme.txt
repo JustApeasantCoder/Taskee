@@ -1,9 +1,14 @@
-Taskee 0.1.1
+Taskee 0.1.2
 
 Run Taskee.exe. Keep the whole folder together in a writable location.
-Taskee reserves native taskbar space beside Windows Weather.
-This first release supports the primary Windows 11 taskbar with left alignment
-and Widgets enabled. Other Windows builds and shell customizations may differ.
+Taskee reserves native taskbar space beside Windows Weather or the clock.
+Supports Windows 11 taskbars with left alignment. General > Taskbar monitors
+can also show the same stats on the second and third monitors independently.
+The primary stays enabled; other monitors are ordered left to right, then top
+to bottom, which may differ from Windows display numbers. Enable "Show my
+taskbar on all displays" in Windows. Disconnected monitors wait for their
+taskbars to return. Turning an option off restores that taskbar's spacing.
+Other Windows builds and shell customizations may differ.
 
 The options window contains Taskbar, Appearance, Sensors and General pages.
 Changes save automatically, with retries if a temporary file lock blocks saving.
@@ -11,6 +16,12 @@ Unreadable or newer profiles are protected from replacement. Use Save recovery
 profile to preserve copies of the original files before saving current settings.
 Drag stat cards or use their arrows to reorder.
 Stacking a card puts it below the previous card, up to the selected row limit.
+Hover over a taskbar stat or preview value for five minutes of live history,
+with current and low/high values. Graphs use the selected units and leave gaps
+for unavailable readings. Rounded scales, minute marks, a latest-reading dot
+and dashed warning/critical lines make the history easier to read.
+Toggle graphs in Appearance. History starts fresh
+when the app starts; resetting session peaks keeps the graph history.
 Closing the options window keeps monitoring active in the tray by default.
 Use Exit Taskee or the tray's Exit action to stop monitoring and restore spacing.
 Running Taskee.exe --exit also closes the running instance.

@@ -47,13 +47,17 @@ try {
     foreach ($name in @('Taskee.lnk', 'Taskee User Guide.lnk')) {
         if (-not (Test-Path -LiteralPath (Join-Path $groupDir $name))) { throw "Shortcut missing: $name" }
     }
-    $uiArgs = '--ui-test --no-taskbar --capture-dir "' + $captureDir + '"'
+    $uiArgs = '--ui-test --no-taskbar --tray --capture-dir "' + $captureDir + '"'
     $uiProcess = Start-Process -FilePath (Join-Path $installDir 'Taskee.exe') -ArgumentList $uiArgs -WindowStyle Hidden -PassThru
     if (-not $uiProcess.WaitForExit(30000)) { throw 'Installed options UI test timed out.' }
     if ($uiProcess.ExitCode -ne 0) { throw "Installed options UI test failed: $($uiProcess.ExitCode)" }
     foreach ($page in @('taskbar', 'appearance', 'sensors', 'general')) {
         if (-not (Test-Path -LiteralPath (Join-Path $captureDir "$page.png"))) { throw "Options page capture missing: $page" }
     }
+    $historyDir = Join-Path $qaRoot 'history'
+    Invoke-QAProcess (Join-Path $installDir 'Taskee.exe') ('--ui-test --no-taskbar --history-test --tray --capture-dir "' + $historyDir + '"') 30000
+    $historyResult = Get-Content -LiteralPath (Join-Path $historyDir 'history-ui-checks.json') -Raw | ConvertFrom-Json
+    if (-not $historyResult.Passed) { throw 'Installed history graph checks failed.' }
     # Reinstall the identical release to exercise the upgrade/repair path.
     Invoke-QAProcess $installer ($installArgs.Replace('install.log', 'reinstall.log'))
 } finally {
@@ -70,7 +74,7 @@ if ($protectedBefore -ne (Get-ProtectedState)) { throw 'Installer QA changed the
 $explorerAfter = @(Get-Process explorer -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id)
 if (@(Compare-Object $explorerBefore $explorerAfter).Count) { throw 'Explorer process identity changed during installer QA.' }
 $result = [ordered]@{
-    Version = $package.Version; PayloadFiles = $payloadCount; OptionsPages = 4
+    Version = $package.Version; PayloadFiles = $payloadCount; OptionsPages = 4; HistoryChecks = $historyResult.Checks.Count
     Install = 'passed'; Reinstall = 'passed'; Uninstall = 'passed'
     ProfilesAndStartup = 'unchanged'; Explorer = 'unchanged'; CaptureDirectory = $captureDir
 }

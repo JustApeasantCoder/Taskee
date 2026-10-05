@@ -16,8 +16,7 @@ internal static class Program
         var window=new MainWindow(args);
         application.MainWindow=window;
         if(!args.Contains("--tray")) window.Show();
-        application.Run();
-        return 0;
+        return application.Run();
     }
     private static async Task<int> Helper(string[] args)
     {

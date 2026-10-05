@@ -72,9 +72,11 @@ public sealed class AppConfig : Observable
     public int SchemaVersion { get; set; } = 1;
     public ObservableCollection<StatConfig> Items { get; set; } = [];
     public AppearanceConfig Appearance { get; set; } = new();
-    private bool taskbar = true, tray = true, notifications, paused, afterburner = true;
+    private bool taskbar = true, tray = true, notifications, paused, afterburner = true, secondMonitor, thirdMonitor;
     private int interval = 1000;
     public bool TaskbarEnabled { get => taskbar; set => Set(ref taskbar, value); }
+    public bool SecondMonitor { get => secondMonitor; set => Set(ref secondMonitor, value); }
+    public bool ThirdMonitor { get => thirdMonitor; set => Set(ref thirdMonitor, value); }
     public bool CloseToTray { get => tray; set => Set(ref tray, value); }
     public bool Notifications { get => notifications; set => Set(ref notifications, value); }
     public bool Paused { get => paused; set => Set(ref paused, value); }

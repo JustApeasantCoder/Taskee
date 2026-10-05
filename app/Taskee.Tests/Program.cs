@@ -36,6 +36,16 @@ Check(panel.Columns.Count==3&&panel.Columns.All(c=>c.Items.Count==2),"Default la
 config.Appearance.MaxRows=1;panel=new MetricEngine().Build(config,frame,2);Check(panel.Columns.Count==6,"Single row layout respects row limit");
 var roundtrip=JsonSerializer.Deserialize<AppConfig>(JsonSerializer.Serialize(config,ConfigStore.Json),ConfigStore.Json)!;
 ConfigStore.Validate(roundtrip);Check(roundtrip.Items.Count==6&&roundtrip.Items[1].StackWithPrevious,"Profile preserves ordering and stacking");
+var legacyMonitorConfig=JsonSerializer.Deserialize<AppConfig>("{\"schemaVersion\":1,\"items\":[]}",ConfigStore.Json)!;
+ConfigStore.Validate(legacyMonitorConfig);Check(!legacyMonitorConfig.SecondMonitor&&!legacyMonitorConfig.ThirdMonitor,"Older profiles default to the primary monitor only");
+config.SecondMonitor=true;config.ThirdMonitor=true;
+var multiMonitor=JsonSerializer.Deserialize<AppConfig>(JsonSerializer.Serialize(config,ConfigStore.Json),ConfigStore.Json)!;
+ConfigStore.Validate(multiMonitor);panel=new MetricEngine().Build(multiMonitor,frame,2);
+Check(multiMonitor.SecondMonitor&&multiMonitor.ThirdMonitor&&panel.SecondMonitor&&panel.ThirdMonitor,"Profile roundtrip delivers both additional monitor choices to the native snapshot");
+multiMonitor.SecondMonitor=false;panel=new MetricEngine().Build(multiMonitor,frame,3);
+Check(!panel.SecondMonitor&&panel.ThirdMonitor,"Third monitor can be enabled independently of the second");
+multiMonitor.TaskbarEnabled=false;panel=new MetricEngine().Build(multiMonitor,frame,4);
+Check(!panel.Enabled&&panel.ThirdMonitor,"Global display toggle hides all monitors without losing their selection");
 roundtrip.Appearance.FontSize=100;ConfigStore.Validate(roundtrip);Check(roundtrip.Appearance.FontSize==20,"Imported font sizes are bounded for the taskbar");
 var peakConfig=new AppConfig { Items=[new() {Metric="cpu.usage",Reading="sessionPeak"}] };
 var peakEngine=new MetricEngine();frame.System["cpu.usage"]=90;peakEngine.Build(peakConfig,frame,1);
@@ -91,4 +101,5 @@ try {
     using(var reader=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete)) normal.Save(normal.Configuration);
     Check(ConfigStore.Open(path).Configuration.Items[0].Label=="Shared-reader setting","Settings reads can coexist with atomic replacement");
 } finally {Directory.Delete(settingsDirectory,true);}
+HistoryGraphChecks.Run(Check);
 Console.WriteLine($"{tests} checks passed.");

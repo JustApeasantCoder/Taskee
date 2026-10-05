@@ -20,13 +20,15 @@ public sealed class SensorFrame
     public long CollectionDurationMs { get; set; }
 }
 public sealed record Measurement(double? Value,string Unit,string Description,string Source,string Status);
-public sealed record RenderItem(string Id,string Label,string Value,string Color,string Tooltip,double? Number,string WidthHint="");
+public sealed record RenderItem(string Id,string Label,string Value,string Color,string Tooltip,double? Number,string WidthHint="",HistoryGraph? History=null);
 public sealed record RenderColumn(List<RenderItem> Items);
 public sealed class PanelSnapshot
 {
     public int Version { get; set; } = 1;
     public long Timestamp { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     public bool Enabled { get; set; }
+    public bool SecondMonitor { get; set; }
+    public bool ThirdMonitor { get; set; }
     public bool Paused { get; set; }
     public AppearanceConfig Appearance { get; set; } = new();
     public List<RenderColumn> Columns { get; set; } = [];
@@ -112,8 +114,11 @@ public sealed class Series
 {
     private readonly List<(double Time,double? Value)> points=[];
     private double? peak;
-    public void Add(double time,double? value)
+    internal HistoryScale GraphScale { get; }=new();
+    public string Unit { get; private set; }="";
+    public void Add(double time,double? value,string unit="")
     {
+        if(unit.Length>0) Unit=unit;
         if(value.HasValue && !double.IsFinite(value.Value)) value=null;
         if(points.Count>0 && time<=points[^1].Time) return;
         points.Add((time,value));
@@ -136,7 +141,10 @@ public sealed class Series
         }
         return duration>0?total/duration:current;
     }
-    public void Clear() { points.Clear(); peak=null; }
+    public void Clear() { points.Clear(); peak=null; Unit=""; GraphScale.Reset(); }
+    public void ResetPeak()=>peak=points.LastOrDefault().Value;
+    public IReadOnlyList<(double Time,double? Value)> Window(double now,int seconds)
+        => points.Where(p=>p.Time>=now-seconds&&p.Time<=now).ToList();
 }
 
 public sealed class MetricEngine
@@ -144,9 +152,10 @@ public sealed class MetricEngine
     private readonly Dictionary<string,Series> histories=[];
     public Dictionary<string,Measurement> Last { get; }=[];
     public void Reset()=>histories.Clear();
+    public void ResetPeaks() { foreach(var history in histories.Values) history.ResetPeak(); }
     public PanelSnapshot Build(AppConfig config,SensorFrame frame,double time,long? utcNow=null)
     {
-        var panel=new PanelSnapshot {Enabled=config.TaskbarEnabled,Paused=config.Paused,Appearance=config.Appearance};
+        var panel=new PanelSnapshot {Enabled=config.TaskbarEnabled,SecondMonitor=config.SecondMonitor,ThirdMonitor=config.ThirdMonitor,Paused=config.Paused,Appearance=config.Appearance};
         long age=(utcNow??DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())-frame.Timestamp;
         long freshness=Math.Max(5000,2L*Math.Max(Math.Clamp(config.RefreshMs,500,5000),Math.Clamp(frame.SampleIntervalMs,500,5000))+Math.Clamp(frame.CollectionDurationMs,0,5000));
         bool stale=frame.Timestamp<=0 || age>freshness || age < -5000;
@@ -154,13 +163,14 @@ public sealed class MetricEngine
         var valid=new HashSet<string>();
         foreach(var item in config.Items) {
             var reading=MetricResolver.Resolve(item,frame);
+            if(reading.Value.HasValue&&!double.IsFinite(reading.Value.Value)) reading=reading with {Value=null,Status="Sensor has no current reading"};
             if(config.Paused) reading=reading with {Value=null,Status="Monitoring paused"};
             if(stale) reading=reading with {Value=null,Status="Waiting for fresh sensor data"};
             Last[item.Id]=reading;
             string key=string.Join('|',item.Id,item.Metric,item.Device,item.Sensor,item.CpuSource);
             valid.Add(key);
             if(!histories.TryGetValue(key,out var history)) histories[key]=history=new();
-            history.Add(time,reading.Value);
+            history.Add(time,reading.Value,reading.Unit);
             var value=history.Read(time,reading.Value,item.Reading,item.WindowSeconds);
             if(!item.Enabled) continue;
             string color=item.Color;
@@ -168,7 +178,8 @@ public sealed class MetricEngine
             string mode=Catalog.Readings.FirstOrDefault(c=>c.Id==item.Reading)?.Name??item.Reading;
             string tooltip=Catalog.Name(item.Metric)+"\n"+reading.Description+"\n"+reading.Source+" · "+reading.Status+"\n"+mode+(item.Reading is "average" or "peak" or "minimum"?$" · {item.WindowSeconds}s":"");
             string hint=reading.Unit switch { "°C"=>item.Unit=="f"?"999°F":"999°C","W"=>"999.9 W","%"=>"100%","B/s"=>item.Unit=="mbps"?"999.9 Mbps":item.Unit is "binary" or "mib"?"999.9 MiB/s":"999.9 MB/s","GiB"=>"99.9 GiB",_=>"999.9 "+reading.Unit };
-            var rendered=new RenderItem(item.Id,config.Appearance.ShowLabels?item.Label:"",Format(value,reading.Unit,item),color,tooltip,value,hint);
+            var graph=config.Appearance.Tooltips?HistoryGraph.Create(history,time,reading with {Unit=history.Unit},item,config.Appearance):null;
+            var rendered=new RenderItem(item.Id,config.Appearance.ShowLabels?item.Label:"",Format(value,reading.Unit,item),color,tooltip,value,hint,graph);
             if(!item.StackWithPrevious || panel.Columns.Count==0 || panel.Columns[^1].Items.Count>=config.Appearance.MaxRows) panel.Columns.Add(new([]));
             panel.Columns[^1].Items.Add(rendered);
         }
